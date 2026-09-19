@@ -439,13 +439,13 @@ func (c *conn) translatePacket(pk packet.Packet, serverSent bool) packet.Packet 
 		pk.EntityRuntimeID = c.translateRuntimeID(pk.EntityRuntimeID, serverSent)
 	case *packet.PlayerAuthInput:
 		if pk.InputData.Load(packet.InputFlagClientPredictedVehicle) {
-			pk.ClientPredictedVehicle = c.translateUniqueID(pk.ClientPredictedVehicle, serverSent)
+			if vehicle, ok := pk.ClientPredictedVehicle.Value(); ok {
+				pk.ClientPredictedVehicle = protocol.Option(c.translateUniqueID(vehicle, serverSent))
+			}
 		}
 	case *packet.PlayerList:
 		for i := range pk.Entries {
-			if entityUniqueID, ok := pk.Entries[i].EntityUniqueID.Value(); ok {
-				pk.Entries[i].EntityUniqueID = protocol.Option(c.translateUniqueID(entityUniqueID, serverSent))
-			}
+			pk.Entries[i].EntityUniqueID = c.translateUniqueID(pk.Entries[i].EntityUniqueID, serverSent)
 		}
 	case *packet.PrimitiveShapes:
 		for i := range pk.Shapes {
@@ -479,7 +479,9 @@ func (c *conn) translatePacket(pk packet.Packet, serverSent bool) packet.Packet 
 	case *packet.SetScoreboardIdentity:
 		if pk.ActionType != packet.ScoreboardIdentityActionClear {
 			for i := range pk.Entries {
-				pk.Entries[i].EntityUniqueID = c.translateUniqueID(pk.Entries[i].EntityUniqueID, serverSent)
+				if entityUniqueID, ok := pk.Entries[i].EntityUniqueID.Value(); ok {
+					pk.Entries[i].EntityUniqueID = protocol.Option(c.translateUniqueID(entityUniqueID, serverSent))
+				}
 			}
 		}
 	case *packet.ShowCredits:
