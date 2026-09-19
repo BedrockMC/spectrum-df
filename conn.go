@@ -369,11 +369,16 @@ func (c *conn) translatePacket(pk packet.Packet, serverSent bool) packet.Packet 
 	case *packet.ChangeMobProperty:
 		pk.EntityUniqueID = int64(c.translateRuntimeID(uint64(pk.EntityUniqueID), serverSent))
 	case *packet.ClientBoundMapItemData:
-		for i, x := range pk.TrackedObjects {
-			if x.Type == protocol.MapObjectTypeEntity {
-				x.EntityUniqueID = c.translateUniqueID(x.EntityUniqueID, serverSent)
-				pk.TrackedObjects[i] = x
+		if trackedObjects, ok := pk.TrackedObjects.Value(); ok {
+			for i, x := range trackedObjects {
+				if x.Type == protocol.MapObjectTypeEntity {
+					if entityUniqueID, ok := x.EntityUniqueID.Value(); ok {
+						x.EntityUniqueID = protocol.Option(c.translateUniqueID(entityUniqueID, serverSent))
+					}
+					trackedObjects[i] = x
+				}
 			}
+			pk.TrackedObjects = protocol.Option(trackedObjects)
 		}
 	case *packet.CommandBlockUpdate:
 		if !pk.Block {
@@ -438,7 +443,9 @@ func (c *conn) translatePacket(pk packet.Packet, serverSent bool) packet.Packet 
 		}
 	case *packet.PlayerList:
 		for i := range pk.Entries {
-			pk.Entries[i].EntityUniqueID = c.translateUniqueID(pk.Entries[i].EntityUniqueID, serverSent)
+			if entityUniqueID, ok := pk.Entries[i].EntityUniqueID.Value(); ok {
+				pk.Entries[i].EntityUniqueID = protocol.Option(c.translateUniqueID(entityUniqueID, serverSent))
+			}
 		}
 	case *packet.PrimitiveShapes:
 		for i := range pk.Shapes {
